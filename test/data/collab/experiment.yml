@@ -1,0 +1,9 @@
+hello_stage: &hello_stage !BasicStage
+  name: hello_world
+  script:
+    - echo Hello World!
+
+
+hello_world: !GenericPipeline
+  runs:
+    - *hello_stage

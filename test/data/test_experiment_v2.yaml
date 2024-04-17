@@ -1,0 +1,123 @@
+# Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
+# For details: https://gitlab.com/mlrep/mldev/-/blob/master/NOTICE.md
+
+sample_function: !function test/data/sample_function.sample_function
+sample_static: !function test/data/sample_function.TestClass.static
+
+services_config:
+  ports:
+    tensorboard: 6006
+    model_controller: 8090
+
+tensorboard: &tensorboard !TensorBoardService
+  name: tensorboard
+  params:
+    logdir: "log/default/log_tb"
+    port: ${root.services_config.ports.tensorboard}
+
+ngrok: &ngrok !NgrokService
+  name: ngrok
+  params:
+    token: "${env.NGROK_TOKEN}"
+    ports:
+      - ${root.services_config.ports.tensorboard}
+      - ${root.services_config.ports.model_controller}
+
+notification_bot: &notification_bot !NotificationBot
+  name: notificationBot
+  params:
+    token: "${env.TELEGRAM_TOKEN}"
+    warnings: false
+
+model_controller: &model_controller !ModelControllerService
+  name: flaskController
+  params:
+    model_path: "${env.MLDEV_MODEL_PATH}"
+    port: ${root.services_config.ports.model_controller}
+
+prepare: &prepare_stage !Stage
+  name: prepare
+  params:
+    size: 1
+  outputs:
+    - !path
+      path: "./data"
+      files:
+        - "first.txt"
+    - !path
+      path: !line |
+            ./logs
+            /logs2
+  script:
+    - >
+      python3 src/prepare.py
+              --to \"${self.outputs[0].get_files()[0]}\"
+              --log \"${path(self.outputs[1])}\"
+
+
+train: &train_stage !Stage
+  name: train
+  params:
+    needs_dvc: true
+    num_iters: 10
+  inputs:
+    - !path
+      path: "./data"
+      files:
+      - "X_train.pickle"
+      - "X_dev.pickle"
+      - "X_test.pickle"
+    - !path
+      files:
+      - "${self.inputs[0].path}/y_train.pickle"
+      - "${self.inputs[0].path}/y_dev.pickle"
+      - "${self.inputs[0].path}/y_test.pickle"
+  outputs: &model_data
+    - !path
+      path: "models/default"
+      files:
+      - "model.pickle-${1+5}"
+  script:
+    -  "python3 src/train.py --n ${self.params.num_iters}"
+
+present_model: &present_model !Stage
+  name: present_model
+  params:
+    some_function: !!python/name:json.dumps
+    obj: !!python/name:mldev_config_parser.config_parser.MLDevSettings
+    result: "${self.params.obj().tool_dir}"
+  inputs: *model_data
+  outputs:
+  env:
+    MLDEV_MODEL_PATH: "models/default/model.pickle"
+    num_path: 1
+  script:
+    - mldev run run_model --input "${json(self.inputs)}"
+    - mldev run run_model ${params(self.env)}
+
+pipeline: !GenericPipeline
+  runs:
+    - *ngrok # common services
+    - *notification_bot
+    - *prepare_stage # prepare
+    - *tensorboard # training
+    - *train_stage
+    - *present_model # finals
+
+run_model: !GenericPipeline
+  runs:
+    - *model_controller # finals
+
+#Ниже тестовые этапы на остальные возможности конфигурационного файла:
+
+condition: !If
+  statement: False
+  true_case:
+    train: *train_stage
+  false_case:
+    - !ForEach
+      collection:
+        prepare: *prepare_stage
+        train: *train_stage
+      commands:
+        - "echo iterating"

@@ -1,0 +1,21 @@
+lazy_pipeline: !GenericPipeline
+  runs: !IterableWrapper
+    - !LazyConstructionTestStage
+      name: stage1
+
+eager_pipeline: !GenericPipeline
+  runs:
+    - !LazyConstructionTestStage
+      name: stage2
+      params:
+        evaluated: "${self.name}"
+
+lazy_pipeline_with_expression: !GenericPipeline
+  runs: !IterableWrapper
+    - !LazyConstructionTestStage
+      name: stage3
+      params:
+        evaluated: "${self.name}"
+
+do_nothing_pipeline: !GenericPipeline
+  runs: []

@@ -1,0 +1,61 @@
+#Possible stage names: train, prepare, continueTrain
+stages:
+  prepare:
+    requirements_file_path: "" #default value, change if necessary
+    inputDir:
+      path: "" #default value, change if necessary. Blank if not necessary
+      inputFiles: ""
+      needsToBePassedAsArg: "false" #true if your script requires dir as argument
+    outputDir:
+      path: "./data" #default value, change if necessary. Blank if not necessary
+      outputFiles:
+        - "X_train.pickle"
+        - "X_dev.pickle"
+        - "X_test.pickle"
+        - "y_train.pickle"
+        - "y_dev.pickle"
+        - "y_test.pickle"
+      needsToBePassedAsArg: "false" #True if your script requires dir as argument
+    scriptPath: "Train/prepare.py" #enumerate them in the correct order if several scripts are needed
+    numberOfIterations: 1
+
+  train:
+    requirements_file_path: "Requirements/requirements.txt" #default value, change if necessary
+    inputDir:
+      path: "./data" #default value, change if necessary. Blank if not necessary
+      inputFiles:
+        - "X_train.pickle"
+        - "X_dev.pickle"
+        - "X_test.pickle"
+        - "y_train.pickle"
+        - "y_dev.pickle"
+        - "y_test.pickle"
+      needsToBePassedAsArg: "false" #true if your script requires dir as argument
+    outputDir:
+      path: "./result" #default value, change if necessary. Blank if not necessary
+      outputFiles:
+        - "model.pickle"
+        - "report.csv"
+      needsToBePassedAsArg: "false" #true if your script requires dir as argument
+    scriptPath: "Train/train.py"
+    numberOfIterations: 1
+    monitoringServices:
+      # Uncomment this block if you want to use tensorboard in your experiment
+      tensorboard:
+        logdir: "log_tb" # this is a directory with your tensorboard logs
+        port: 6006 # this is a port where tensorboard will be running
+
+      # Uncomment this block if you want to expose some ports with help of ngrok.com
+      # (be careful with paperspace, my account was restricted due to "unauthorized activity")
+      # (should be okay with Google Colab, but should be checked)
+      # If your tunnel is not found at your ngrok dashboard, run ngrok_urls.sh to see your public urls
+      ngrok:
+        token: "${NGROK_TOKEN}" # your personal ngrok token, which you can get at https://ngrok.com
+        ports: # ports which you want to expose
+          - 6006
+
+      # Uncomment this block if you want to get a telegram notification bot
+      # read bot instruction
+      notificationBot:
+        token: "" #put your token here
+        warnings: "False" #True if you would like to get notifications

@@ -1,0 +1,7 @@
+ipython: &iris_visualization !JupyterStage
+  name: iris_visualization
+  notebook_pipeline: test/data/test_ipython.test_pipeline
+
+pipeline: !GenericPipeline
+  runs:
+    - *iris_visualization

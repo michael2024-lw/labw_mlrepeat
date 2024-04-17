@@ -1,0 +1,6 @@
+# this is a fix for dvc==1.6.6 install failure
+future
+pydrive2~=1.4.13
+dvc==1.6.6
+simpleeval
+pathspec==0.9.0

@@ -1,0 +1,54 @@
+# Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
+# For details: https://gitlab.com/mlrep/mldev/-/blob/master/NOTICE.md
+
+mock_stage: &mock_stage !MockStage # ok, invokes prepare and __call__
+  name: mock_stage
+
+pipeline: !GenericPipeline
+  runs:
+    - *mock_stage
+
+pipeline2: !GenericPipeline
+  stages:
+    - mock_stage
+
+mock_stage2: *mock_stage # ok, invokes mock_stage prepare and __call__
+
+mock_stage3: mock_stage # prints with warning but runs
+
+#stage: *mock_stage
+
+mock_stages_list2: # ok, invokes mock_stage prepare and __call__
+  - *mock_stage
+
+mock_stages_list3: # prints warning but runs
+  - mock_stage
+
+failed_stage:
+   runs: mock_stage
+   stages: *mock_stage
+
+failed_pipeline:
+# runs everything as stages
+   - stage # cant find this one
+   - mock_stage
+   - pipeline2 # will run pipeline....
+   - failed_pipeline2
+
+failed_pipeline2: !GenericPipeline
+  stages:
+   - stage # cant find this one
+   - mock_stage
+
+failed_pipeline3: !GenericPipeline
+  runs:
+# expects refs to stages
+    - stage
+    - mock_stage
+    - pipeline
+
+# this will run and cause mldev to quit on SIGABRT exit code 134
+#recursive_pipeline: !GenericPipeline
+#  stages:
+#    - recursive_pipeline
+# it is more difficult to make a recursive pipeline with anchors though

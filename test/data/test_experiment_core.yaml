@@ -1,0 +1,58 @@
+# Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
+# For details: https://gitlab.com/mlrep/mldev/-/blob/master/NOTICE.md
+
+sample_function: !function test/data/sample_function.sample_function
+temp_dir: "./test/temp"
+
+prepare: &prepare_stage !BasicStage
+  name: prepare
+  params:
+    size: 1
+  outputs:
+    - !path
+      path: "${root.temp_dir}/data"
+      files:
+        - "first.txt"
+    - !path
+      path: !line |
+            ${root.temp_dir}/logs
+            /logs2
+    - !path
+      path: "${root.temp_dir}/logs\
+            /logs2"
+  script:
+    - >
+      python3 test/data/sample_function.py "${self.name}"
+    - >
+      python3 test/data/sample_function.py "${self.name} part 2"
+
+
+train: &train_stage !BasicStage
+  name: train
+  params:
+    needs_dvc: true
+    num_iters: 10
+  inputs:
+    - !path
+      path: "${root.temp_dir}/data"
+      files:
+      - "X_train.pickle"
+      - "X_dev.pickle"
+      - "X_test.pickle"
+    - !path
+      files:
+      - "${self.inputs[0].path}/y_train.pickle"
+      - "${self.inputs[0].path}/y_dev.pickle"
+      - "${self.inputs[0].path}/y_test.pickle"
+  outputs:
+    - !path
+      path: "${root.temp_dir}/models/default"
+      files:
+      - "model.pickle-${1+5}"
+  script:
+    -  "python3 test/data/sample_function.py ${self.params.num_iters}"
+
+pipeline: !GenericPipeline
+  runs:
+    - *prepare_stage # prepare
+    - *train_stage

@@ -1,0 +1,65 @@
+# Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
+# For details: https://gitlab.com/mlrep/mldev/-/blob/master/NOTICE.md
+
+prepare: &prepare_stage !Stage
+  name: prepare
+  params:
+    size: 1
+    needs_dvc: true
+  inputs:
+    - !path { path: "./src" }
+  outputs:
+    - !path { path: "./data" }
+  script:
+    - "python3 src/prepare.py"
+
+
+train: &train_stage !Stage
+  name: train
+  params:
+    needs_dvc: true
+    num_iters: 10
+  inputs:
+    - !path
+      path: "./data"
+      files:
+        - "X_train.pickle"
+        - "X_dev.pickle"
+        - "X_test.pickle"
+        - "y_train.pickle"
+        - "y_dev.pickle"
+        - "y_test.pickle"
+  outputs:
+    - !path
+      path: "models/default"
+      files:
+        - "model.pickle"
+  script:
+    - "python3 src/train.py --n ${self.params.num_iters}"
+
+ipython_pipeline: &IPythonPipeline !Stage
+  name: IPythonPipeline
+  params:
+    needs_dvc: true
+  inputs:
+    - !path
+      path: "./data"
+      files:
+        - "X_train.pickle"
+        - "y_train.pickle"
+  outputs:
+    - !path
+      path: "./"
+      files:
+        - "fig.png"
+  env:
+    DATA_PATH: "./data"
+    FILES: "X_train.pickle y_train.pickle"
+  script:
+    - "mldev run -f experiment_ipython.yml pipeline"
+
+pipeline: !GenericPipeline
+  runs:
+    - *prepare_stage # prepare
+    - *train_stage
+    - *IPythonPipeline
